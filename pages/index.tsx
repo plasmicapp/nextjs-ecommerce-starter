@@ -8,6 +8,7 @@ import { getConfig } from '@framework/api'
 import getAllProducts from '@framework/product/get-all-products'
 import getSiteInfo from '@framework/common/get-site-info'
 import getAllPages from '@framework/common/get-all-pages'
+import PlasmicLoader from '@plasmicapp/loader'
 
 export async function getStaticProps({
   preview,
@@ -42,6 +43,7 @@ export default function Home({
 }: InferGetStaticPropsType<typeof getStaticProps>) {
   return (
     <>
+      <PlasmicLoader component="SummerPromotionBanner" />
       <Grid>
         {products.slice(0, 3).map((product, i) => (
           <ProductCard

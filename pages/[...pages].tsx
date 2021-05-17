@@ -11,6 +11,10 @@ import { getConfig } from '@framework/api'
 import getPage from '@framework/common/get-page'
 import getAllPages from '@framework/common/get-all-pages'
 import { defaultPageProps } from '@lib/defaults'
+import PlasmicLoader, {
+  getComponentFromUrl as getPlasmicComponentFromUrl,
+  getPageUrls as getPlasmicPageUrls,
+} from '@plasmicapp/loader'
 
 export async function getStaticProps({
   preview,
@@ -20,6 +24,17 @@ export async function getStaticProps({
   const config = getConfig({ locale })
   const { pages } = await getAllPages({ preview, config })
   const path = params?.pages.join('/')
+
+  const plasmicPage = path ? getPlasmicComponentFromUrl(path) : undefined
+  if (plasmicPage) {
+    return {
+      props: {
+        pageType: 'plasmic' as const,
+        plasmicPage,
+      },
+    }
+  }
+
   const slug = locale ? `${locale}/${path}` : path
 
   const pageItem = pages.find((p) => (p.url ? getSlug(p.url) === slug : false))
@@ -53,22 +68,37 @@ export async function getStaticPaths({ locales }: GetStaticPathsContext) {
     })
   log()
 
+  const allPaths = [
+    ...paths,
+    ...getPlasmicPageUrls()
+      .filter((url) => !['/', '/summer'].includes(url))
+      .map((url) => ({
+        params: { pages: url.substring(1).split('/') },
+      })),
+  ]
+
   return {
-    paths,
+    paths: allPaths,
     // Fallback shouldn't be enabled here or otherwise this route
     // will catch every page, even 404s, and we don't want that
     fallback: false,
   }
 }
 
-export default function Pages({
-  page,
-}: InferGetStaticPropsType<typeof getStaticProps>) {
-  return (
-    <div className="max-w-2xl mx-8 sm:mx-auto py-20">
-      {page?.body && <Text html={page.body} />}
-    </div>
-  )
+export default function Pages(
+  props: InferGetStaticPropsType<typeof getStaticProps>
+) {
+  if (props.pageType === 'plasmic') {
+    const { name, projectId } = props.plasmicPage
+    return <PlasmicLoader component={name} projectId={projectId} />
+  } else {
+    const { page } = props
+    return (
+      <div className="max-w-2xl mx-8 sm:mx-auto py-20">
+        {page?.body && <Text html={page.body} />}
+      </div>
+    )
+  }
 }
 
 Pages.Layout = Layout
